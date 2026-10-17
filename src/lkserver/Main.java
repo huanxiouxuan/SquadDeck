@@ -90,7 +90,7 @@ public class Main {
                 mainLoop.stop();                     // 唤醒并退出主反应堆循环
             }, "ShutdownHook"));
 
-            System.out.println("开黑启动器 启动: port=" + port
+            System.out.println("SquadDeck 启动: port=" + port
                     + ", 启动器目录=" + ctx.root
                     + ", 游戏目录=" + ctx.modesDir
                     + ", 子反应堆线程数=" + subReactorNum);

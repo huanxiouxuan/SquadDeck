@@ -1,4 +1,4 @@
-/* 开黑启动器前端：左侧游戏列表 + iframe 载入选中的游戏 + 添加游戏。
+/* SquadDeck 启动器前端：左侧游戏列表 + iframe 载入选中的游戏 + 添加游戏。
    数据来自 GET /api/games（服务端扫描 gamemode/ 目录）。
    添加游戏 = 从任意磁盘选文件夹导入：POST /api/games/import 建目录、写 game.json，
    再逐文件 POST /api/games/upload 把文件复制进 gamemode/<id>/。 */
@@ -477,7 +477,7 @@
   // 同时也是聊天和表情动态栏里你自己那条的名字。≤10 字，本地记住，刷新不丢。
   //
   // 【名字门禁】没登记名字 = 没有身份，聊天/表情/选游戏全部停用：
-  // 这是开黑启动器——进来第一件事是报上名字。登记后自动恢复，无需刷新。
+  // 这是 SquadDeck——进来第一件事是报上名字。登记后自动恢复，无需刷新。
 
   var nameReg = document.getElementById('playerName');
   var chatInput = document.getElementById('chatInput');

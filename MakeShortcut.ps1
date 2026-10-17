@@ -19,8 +19,8 @@ $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 $ico = Join-Path $root 'OIP-C.ico'
 $bat = Join-Path $root 'SquadDeck.bat'
-$linkName = '开黑启动器.lnk'
-$desc = 'LKSERVER2 联机游戏启动器'
+$linkName = 'SquadDeck.lnk'
+$desc = 'SquadDeck 联机游戏启动器'
 
 # ---------------- .lnk 二进制构造（MS-SHLLINK） ----------------
 function New-LnkBytes {

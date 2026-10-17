@@ -2,7 +2,7 @@
 chcp 65001 >nul
 setlocal
 cd /d "%~dp0"
-title KaiHei Launcher
+title SquadDeck Launcher
 
 rem ============================================================
 rem  One-click launcher: build (only when needed) + start server
@@ -25,7 +25,7 @@ if not errorlevel 1 (
 )
 
 echo ============================================================
-echo    KaiHei Launcher  -  LAN Multiplayer
+echo    SquadDeck Launcher  -  LAN Multiplayer
 echo ============================================================
 echo.
 
@@ -56,7 +56,7 @@ echo [2/2] Starting the server in a separate window ...
 echo     Keep THAT window open while playing.
 echo     Close it (or press Ctrl+C in it) to stop the server.
 echo.
-start "KaiHei Game Server" cmd /k "run.bat %PORT% www"
+start "SquadDeck Game Server" cmd /k "run.bat %PORT% www"
 
 echo Waiting for the server to come up ...
 rem Use ping as a portable delay: 'timeout' may resolve to a non-Windows binary on some setups.
