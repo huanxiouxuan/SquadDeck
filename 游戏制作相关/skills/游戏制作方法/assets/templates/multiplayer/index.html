@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>联机模板 · 开黑启动器</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    background: radial-gradient(circle at 20% 0%, #1b2436 0%, #0b0f18 55%, #080a10 100%);
+    color: #e8eefc;
+    font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .app { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+  .stage { position: relative; width: 480px; }
+  .panel {
+    background: rgba(255,255,255,.045);
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 16px; padding: 28px;
+    text-align: center;
+  }
+  .big {
+    font-size: 84px; font-weight: 700; line-height: 1;
+    color: #ffd166; font-variant-numeric: tabular-nums;
+    letter-spacing: 2px;
+  }
+  .label { font-size: 12px; color: #7f90b0; letter-spacing: 1px; margin-top: 6px; }
+  .row { display: flex; gap: 24px; justify-content: center; margin-top: 22px; }
+  .cell b { display: block; font-size: 20px; color: #bcd6ff; font-variant-numeric: tabular-nums; }
+  .cell span { font-size: 11px; color: #7f90b0; }
+  .hit {
+    margin-top: 26px; width: 100%; padding: 22px;
+    border: none; border-radius: 14px; cursor: pointer;
+    font-size: 18px; font-weight: 700; font-family: inherit;
+    background: linear-gradient(180deg, #4ea1ff, #2f7fe0); color: #04101f;
+    transition: transform .06s;
+  }
+  .hit:active { transform: scale(.985); }
+  .hit:disabled { opacity: .5; cursor: default; }
+  .side { width: 250px; display: flex; flex-direction: column; gap: 14px; }
+  .card {
+    background: rgba(255,255,255,.045);
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 14px; padding: 14px 16px;
+  }
+  h1 { font-size: 17px; margin: 0 0 4px; font-weight: 600; }
+  h2 { font-size: 13px; margin: 0 0 8px; font-weight: 500; color: #8ea3c8; }
+  .sub { font-size: 12px; color: #7f90b0; line-height: 1.8; }
+  ul { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+  li { display: flex; justify-content: space-between; padding: 5px 2px; }
+  li b { color: #ffd166; font-variant-numeric: tabular-nums; }
+  #status { font-size: 12px; color: #ff9f9f; min-height: 18px; text-align: center; }
+  .overlay {
+    position: absolute; inset: 0; border-radius: 16px;
+    background: rgba(8,10,16,.92);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; text-align: center; padding: 24px;
+  }
+  .overlay.hidden { display: none; }
+  .overlay h3 { margin: 0; font-size: 24px; font-weight: 600; }
+  .overlay p { margin: 0; font-size: 13px; color: #93a4c4; line-height: 1.8; }
+  button.primary {
+    padding: 11px 22px; border: none; border-radius: 9px; cursor: pointer;
+    font-size: 14px; font-family: inherit; font-weight: 600;
+    background: linear-gradient(180deg, #4ea1ff, #2f7fe0); color: #04101f;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="stage">
+    <div class="panel">
+      <div class="big" id="count">0</div>
+      <div class="label">全服总点击</div>
+
+      <div class="row">
+        <div class="cell"><b id="mine">0</b><span>我的点击</span></div>
+        <div class="cell"><b id="online">1</b><span>在线</span></div>
+      </div>
+
+      <button class="hit" id="hit" disabled>点我 +1</button>
+      <div id="status" style="margin-top:12px"></div>
+    </div>
+
+    <div class="overlay" id="overlay">
+      <h3>🔢 联机模板</h3>
+      <p>所有人共用一个计数器：谁点一下，全场都 +1。<br>
+         这是最小可玩的联机骨架。</p>
+      <button class="primary" id="enter">进入</button>
+      <p id="err" style="color:#ff9f9f"></p>
+    </div>
+  </div>
+
+  <aside class="side">
+    <div class="card">
+      <h1>联机模板</h1>
+      <div class="sub">服务端权威 · 快照同步</div>
+    </div>
+    <div class="card">
+      <h2>在线玩家</h2>
+      <ul id="players"><li class="sub">等待…</li></ul>
+    </div>
+    <div class="card">
+      <h2>改造成你的游戏</h2>
+      <div class="sub">
+        · 改 <code>game.json</code> 的 id/name/icon<br>
+        · 换 <code>server/MultiTemplateWorld.java</code> 里的世界状态与 <code>sync</code> 输入<br>
+        · 客户端把 <code>a=1</code> 换成你的输入（方向/坐标…）<br>
+        · 世界默认不启动：房主要拨开关，或先 POST <code>/api/games/&lt;id&gt;/start</code>
+      </div>
+    </div>
+  </aside>
+</div>
+<script src="game.js"></script>
+</body>
+</html>

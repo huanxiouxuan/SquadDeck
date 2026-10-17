@@ -1,0 +1,9 @@
+{
+  "id": "snake",
+  "name": "贪吃蛇",
+  "desc": "经典贪吃蛇：越吃越快、金色果实加分、撞击即终局",
+  "icon": "🐍",
+  "entry": "index.html",
+  "api": "/api/snake",
+  "version": 1
+}

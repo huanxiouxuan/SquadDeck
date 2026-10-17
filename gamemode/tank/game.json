@@ -1,0 +1,11 @@
+{
+  "id": "tank",
+  "name": "坦克世界",
+  "desc": "多人联机坦克对战：车身炮塔分离、5 发弹匣、视野扇形、可破坏障碍",
+  "icon": "tank.ico",
+  "entry": "index.html",
+  "api": "/api/tank",
+  "world": "lkserver.GameWorld",
+  "autostart": true,
+  "version": 1
+}

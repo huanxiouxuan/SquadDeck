@@ -1,0 +1,21 @@
+# ===== 编译产物（均可由源码重新生成，SquadDeck.bat 会按 mtime 自动重编）=====
+out/
+*.class
+.server-classes/
+*.jar
+
+# ===== 第三方大文件（不进仓库，GitHub 单文件上限 100MB）=====
+*.exe
+
+# ===== 运行日志 / 系统垃圾 =====
+*.log
+Thumbs.db
+desktop.ini
+
+# ===== 编辑器 =====
+.vscode/
+.idea/
+
+# ===== 其他 =====
+node_modules/
+.workbuddy/

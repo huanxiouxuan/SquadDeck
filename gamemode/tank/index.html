@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/x-icon" href="tank.ico">
+<title>坦克世界 · 开黑启动器</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    background: radial-gradient(circle at 20% 0%, #1b2436 0%, #0b0f18 55%, #080a10 100%);
+    color: #e8eefc;
+    font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .app { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+  .stage { position: relative; }
+  canvas {
+    display: block; border-radius: 14px;
+    border: 1px solid rgba(120,170,255,.25);
+    box-shadow: 0 18px 50px rgba(0,0,0,.55);
+    background: #0b1119;
+    max-width: 100%; height: auto;
+    cursor: crosshair;
+  }
+  .side { width: 250px; display: flex; flex-direction: column; gap: 14px; }
+  .card {
+    background: rgba(255,255,255,.045);
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 14px; padding: 14px 16px;
+  }
+  h1 { font-size: 17px; margin: 0 0 4px; font-weight: 600; letter-spacing: .3px; }
+  h2 { font-size: 13px; margin: 0 0 10px; font-weight: 500; color: #8ea3c8; letter-spacing: .5px; }
+  .sub { font-size: 12px; color: #7f90b0; line-height: 1.7; }
+  .keys { font-size: 12px; color: #8ea3c8; line-height: 2; }
+  kbd {
+    display: inline-block; padding: 1px 7px; margin-right: 2px;
+    border: 1px solid rgba(255,255,255,.18); border-radius: 5px;
+    background: rgba(255,255,255,.06); font-size: 11px; font-family: inherit;
+  }
+  ol#board { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+  ol#board li {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 6px; border-radius: 8px;
+  }
+  ol#board li.me { background: rgba(78,161,255,.16); }
+  ol#board b { margin-left: auto; color: #ffd166; font-variant-numeric: tabular-nums; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  #status { font-size: 12px; color: #ff9f9f; min-height: 16px; }
+  .overlay {
+    position: absolute; inset: 0; border-radius: 14px;
+    background: rgba(8,10,16,.86);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; text-align: center; padding: 20px;
+  }
+  .overlay.hidden { display: none; }
+  .overlay h3 { margin: 0; font-size: 22px; font-weight: 600; }
+  .overlay p { margin: 0; font-size: 13px; color: #93a4c4; line-height: 1.7; }
+  .overlay .overlay-tip { font-size: 12px; color: #7f90b0; }
+  .row { display: flex; gap: 8px; }
+  input {
+    padding: 10px 12px; border-radius: 9px; font-size: 14px; font-family: inherit;
+    border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.07);
+    color: #e8eefc; outline: none; width: 170px;
+  }
+  input:focus { border-color: #4ea1ff; }
+  button {
+    padding: 10px 20px; border: none; border-radius: 9px; cursor: pointer;
+    font-size: 14px; font-family: inherit; font-weight: 600;
+    background: linear-gradient(180deg, #4ea1ff, #2f7fe0); color: #04101f;
+  }
+  button:disabled { opacity: .5; cursor: default; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="stage">
+    <canvas id="game" width="960" height="640"></canvas>
+    <div class="overlay" id="overlay">
+      <h3>坦克世界</h3>
+      <p>服务器由房主启动，其他人用浏览器打开同一个地址即可一起玩。<br>
+         <kbd>WASD</kbd>/方向键 移动，鼠标瞄准，<b>左键开火</b>。<br>
+         <b>车身</b>跟着移动方向转、<b>炮塔</b>跟着鼠标转（各 1 秒转 90°，车头没转到位前开不动）。<br>
+         弹匣 <b>5 发</b>、每 2 秒回 1 发，打空就打不出来；障碍物打 <b>3 发</b> 就碎。<br>
+         视野只有车身正前方 ±45°、10 格；<b>看不见的方向有人开炮，车外会亮红色警戒标志</b>。</p>
+      <div class="row">
+        <button id="join">开始</button>
+      </div>
+      <p class="overlay-tip">名字在启动器右上角的「名字登记」里设置（≤10 字），这里点开始直接进。</p>
+      <p id="joinErr" style="color:#ff9f9f"></p>
+    </div>
+  </div>
+
+  <div class="side">
+    <div class="card">
+      <h1>坦克世界</h1>
+      <div class="sub">服务端权威判定 · 地图比一屏大 · 坦克永远在画面中心</div>
+    </div>
+
+    <div class="card">
+      <h2>战况</h2>
+      <ol id="board"><li class="sub">等待玩家加入…</li></ol>
+    </div>
+
+    <div class="card">
+      <h2>操作与规则</h2>
+      <div class="keys">
+        <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / <kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd> 移动<br>
+        <kbd>鼠标</kbd> 瞄准 &nbsp;·&nbsp; <kbd>左键</kbd> 开火（可长按）
+      </div>
+      <div class="sub" style="margin-top:8px">
+        · 车身 1 秒转 90°；<b>车头没转到位前不动</b><br>
+        · 炮塔也是 1 秒转 90°，跟鼠标<br>
+        · 弹匣 5 发，2 秒回 1 发（左上竖条）<br>
+        · 两发之间至少隔 1 秒<br>
+        · 打满 3 发才能打碎一格障碍<br>
+        · 视野 = 车身正前方 ±45°、10 格<br>
+        · 看不见的方向有人开炮 → 车外红色警戒标志
+      </div>
+    </div>
+
+    <div id="status"></div>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>

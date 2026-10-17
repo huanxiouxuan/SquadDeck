@@ -1,0 +1,10 @@
+{
+  "id": "gmv9ny2bh",
+  "name": "五子棋对弈",
+  "desc": "开房对弈：两人一局，输房间码加入，可同时开多局",
+  "icon": "⚫⚪",
+  "entry": "index.html",
+  "api": "/api/gmv9ny2bh",
+  "world": "lkserver.GomokuWorld",
+  "version": 1
+}

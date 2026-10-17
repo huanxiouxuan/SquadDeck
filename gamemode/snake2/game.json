@@ -1,0 +1,11 @@
+{
+  "id": "snake2",
+  "name": "贪吃蛇联机版",
+  "desc": "多人同屏贪吃蛇：吃果实变长提速，撞墙撞人即死，尸体变果实",
+  "icon": "🐍",
+  "entry": "index.html",
+  "api": "/api/snake2",
+  "world": "lkserver.SnakeWorld",
+  "autostart": false,
+  "version": 1
+}

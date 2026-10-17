@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>贪吃蛇 · 开黑启动器</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    background: radial-gradient(circle at 20% 0%, #1b2436 0%, #0b0f18 55%, #080a10 100%);
+    color: #e8eefc;
+    font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .app { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+  .stage { position: relative; }
+  canvas {
+    display: block; border-radius: 14px;
+    border: 1px solid rgba(120,170,255,.25);
+    box-shadow: 0 18px 50px rgba(0,0,0,.55);
+    background: #0b1119;
+    max-width: 100%; height: auto;
+  }
+  .side { width: 250px; display: flex; flex-direction: column; gap: 14px; }
+  .card {
+    background: rgba(255,255,255,.045);
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 14px; padding: 14px 16px;
+  }
+  h1 { font-size: 17px; margin: 0 0 4px; font-weight: 600; letter-spacing: .3px; }
+  h2 { font-size: 13px; margin: 0 0 10px; font-weight: 500; color: #8ea3c8; letter-spacing: .5px; }
+  .sub { font-size: 12px; color: #7f90b0; line-height: 1.7; }
+  .keys { font-size: 12px; color: #8ea3c8; line-height: 2; }
+  kbd {
+    display: inline-block; padding: 1px 7px; margin-right: 2px;
+    border: 1px solid rgba(255,255,255,.18); border-radius: 5px;
+    background: rgba(255,255,255,.06); font-size: 11px; font-family: inherit;
+  }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 8px; }
+  .stat b { display: block; font-size: 22px; font-weight: 600; color: #ffd166; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 11px; color: #7f90b0; }
+  .stat.green b { color: #8be3a8; }
+  #status { font-size: 12px; color: #ff9f9f; min-height: 16px; }
+  .overlay {
+    position: absolute; inset: 0; border-radius: 14px;
+    background: rgba(8,10,16,.86);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; text-align: center; padding: 20px;
+  }
+  .overlay.hidden, .screen.hidden { display: none; }
+  .overlay h3 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: 1px; }
+  .overlay p { margin: 0; font-size: 13px; color: #93a4c4; line-height: 1.8; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  button {
+    padding: 10px 20px; border: none; border-radius: 9px; cursor: pointer;
+    font-size: 14px; font-family: inherit; font-weight: 600;
+    background: linear-gradient(180deg, #4ea1ff, #2f7fe0); color: #04101f;
+  }
+  button:hover { filter: brightness(1.1); }
+  button:disabled { opacity: .5; cursor: default; }
+  button.ghost {
+    background: rgba(255,255,255,.07); color: #c9d6ee;
+    border: 1px solid rgba(255,255,255,.16);
+  }
+  .score-line { font-size: 15px; color: #e8eefc; }
+  .score-line b { color: #ffd166; font-variant-numeric: tabular-nums; }
+  .newbest { color: #8be3a8 !important; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="stage">
+    <canvas id="game" width="960" height="640"></canvas>
+    <div class="overlay" id="overlay">
+
+      <div class="screen" id="scReady">
+        <h3>🐍 贪吃蛇</h3>
+        <p>吃果实变长、得分、加速——撞墙或咬到自己就结束。<br>
+           每吃 5 颗普通果实，会刷出一颗<b style="color:#ffd166">金色果实</b>（+50 分，几秒内不吃会消失）。<br>
+           地图 30×20 格，正好一屏装得下——睁眼就是全场，没有镜头偷懒。</p>
+        <div class="row">
+          <button class="ghost" data-speed="185">🐢 休闲</button>
+          <button data-speed="150">🐍 标准</button>
+          <button class="ghost" data-speed="110">⚡ 竞速</button>
+        </div>
+        <p><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 控制方向 &nbsp;·&nbsp; <kbd>空格</kbd> 暂停</p>
+      </div>
+
+      <div class="screen hidden" id="scPause">
+        <h3>⏸ 已暂停</h3>
+        <p>休息一下，蛇也歇会儿。</p>
+        <div class="row"><button id="btnResume">继续</button></div>
+        <p><kbd>空格</kbd> 也可以继续</p>
+      </div>
+
+      <div class="screen hidden" id="scOver">
+        <h3>💥 游戏结束</h3>
+        <p class="score-line">本局得分 <b id="overScore">0</b> &nbsp;·&nbsp; 历史最高 <b id="overBest">0</b></p>
+        <p id="overTip"></p>
+        <div class="row"><button id="btnRetry">再来一局</button></div>
+        <p><kbd>回车</kbd> / <kbd>R</kbd> 快速重开</p>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="side">
+    <div class="card">
+      <h1>贪吃蛇</h1>
+      <div class="sub">纯客户端单机版 · 最高分存在本机浏览器里</div>
+    </div>
+
+    <div class="card">
+      <h2>战况</h2>
+      <div class="stats">
+        <div class="stat"><b id="score">0</b><span>分数</span></div>
+        <div class="stat"><b id="best">0</b><span>最高分</span></div>
+        <div class="stat green"><b id="len">3</b><span>身长</span></div>
+        <div class="stat green"><b id="level">1</b><span>速度等级</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>操作与规则</h2>
+      <div class="keys">
+        <kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 移动<br>
+        <kbd>空格</kbd> 暂停 / 继续 &nbsp;·&nbsp; <kbd>R</kbd> 重开
+      </div>
+      <div class="sub" style="margin-top:8px">
+        · 普通果实 <b>+10</b> 分，每颗整体提速一档<br>
+        · 金色果实 <b>+50</b> 分，过期会消失<br>
+        · 撞墙 / 咬到自己 = 终局<br>
+        · 地图 30×20 格，一屏看完全场<br>
+        · 支持触屏滑动操作
+      </div>
+    </div>
+
+    <div id="status"></div>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>

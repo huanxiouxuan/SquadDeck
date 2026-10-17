@@ -1,0 +1,10 @@
+{
+  "id": "multi-template",
+  "name": "联机模板",
+  "desc": "全服计数：最小可玩的联机骨架（服务端权威）",
+  "icon": "🔢",
+  "entry": "index.html",
+  "world": "lkserver.MultiTemplateWorld",
+  "autostart": false,
+  "version": 1
+}

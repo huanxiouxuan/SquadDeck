@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>五子棋对弈 · 开黑启动器</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    background: radial-gradient(circle at 20% 0%, #1b2436 0%, #0b0f18 55%, #080a10 100%);
+    color: #e8eefc;
+    font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .app { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+  .stage { position: relative; }
+  canvas {
+    display: block; border-radius: 14px;
+    border: 1px solid rgba(120,170,255,.25);
+    box-shadow: 0 18px 50px rgba(0,0,0,.55);
+    max-width: 100%; height: auto;
+    cursor: pointer;
+  }
+  .side { width: 258px; display: flex; flex-direction: column; gap: 14px; }
+  .card {
+    background: rgba(255,255,255,.045);
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 14px; padding: 14px 16px;
+  }
+  h1 { font-size: 17px; margin: 0 0 4px; font-weight: 600; letter-spacing: .3px; }
+  h2 { font-size: 13px; margin: 0 0 10px; font-weight: 500; color: #8ea3c8; letter-spacing: .5px; }
+  .sub { font-size: 12px; color: #7f90b0; line-height: 1.7; }
+  .roomcode {
+    font-size: 30px; font-weight: 700; letter-spacing: 6px;
+    color: #ffd166; font-variant-numeric: tabular-nums;
+    text-align: center; padding: 6px 0 2px;
+  }
+  .seats { display: flex; flex-direction: column; gap: 8px; }
+  .seat {
+    display: flex; align-items: center; gap: 9px;
+    padding: 8px 10px; border-radius: 10px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid transparent;
+  }
+  .seat.active { border-color: rgba(255,209,102,.55); background: rgba(255,209,102,.08); }
+  .seat .stone {
+    width: 20px; height: 20px; border-radius: 50%; flex: none;
+    box-shadow: inset 0 -2px 3px rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.5);
+  }
+  .seat .stone.b { background: radial-gradient(circle at 34% 30%, #6b6b6b, #0a0a0a 72%); }
+  .seat .stone.w { background: radial-gradient(circle at 34% 30%, #ffffff, #b9c0cc 78%); }
+  .seat .who { font-size: 13px; }
+  .seat .tag { margin-left: auto; font-size: 11px; color: #7f90b0; }
+  .seat .tag.on { color: #8be3a8; }
+  .seat .tag.off { color: #ff8f8f; }
+  .turnline { font-size: 13px; text-align: center; padding: 8px; border-radius: 10px;
+    background: rgba(78,161,255,.12); color: #bcd6ff; font-weight: 600; }
+  .turnline.over { background: rgba(255,209,102,.14); color: #ffd166; }
+  .turnline.mine { background: rgba(139,227,168,.16); color: #8be3a8; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .row > * { flex: 1; }
+  input {
+    width: 100%; padding: 11px 12px; border-radius: 9px;
+    border: 1px solid rgba(255,255,255,.16); background: rgba(0,0,0,.28);
+    color: #e8eefc; font-size: 18px; font-family: inherit; font-weight: 700;
+    letter-spacing: 4px; text-align: center; text-transform: uppercase;
+  }
+  input::placeholder { letter-spacing: 1px; font-weight: 400; font-size: 13px; color: #5f6f8c; }
+  button {
+    padding: 11px 18px; border: none; border-radius: 9px; cursor: pointer;
+    font-size: 14px; font-family: inherit; font-weight: 600;
+    background: linear-gradient(180deg, #4ea1ff, #2f7fe0); color: #04101f;
+  }
+  button:hover { filter: brightness(1.1); }
+  button:disabled { opacity: .5; cursor: default; }
+  button.ghost { background: rgba(255,255,255,.08); color: #cfe0ff; }
+  button.danger { background: rgba(255,120,120,.16); color: #ffb3b3; }
+  #status { font-size: 12px; color: #ff9f9f; min-height: 16px; text-align: center; }
+  #toast {
+    position: absolute; left: 50%; top: 18px; transform: translateX(-50%);
+    background: rgba(8,10,16,.9); border: 1px solid rgba(255,120,120,.35);
+    color: #ffb3b3; font-size: 13px; padding: 9px 18px; border-radius: 10px;
+    pointer-events: none; white-space: nowrap; z-index: 5;
+  }
+  #toast.hidden { display: none; }
+  .overlay {
+    position: absolute; inset: 0; border-radius: 14px;
+    background: rgba(8,10,16,.9);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 13px; text-align: center; padding: 24px;
+  }
+  .overlay.hidden { display: none; }
+  .overlay h3 { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: 1px; }
+  .overlay p { margin: 0; font-size: 13px; color: #93a4c4; line-height: 1.8; }
+  .overlay .overlay-tip { font-size: 12px; color: #7f90b0; }
+  .overlay .box { width: min(320px, 100%); display: flex; flex-direction: column; gap: 12px; }
+  .overlay .row { justify-content: center; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="stage">
+    <canvas id="board"></canvas>
+    <div id="toast" class="hidden"></div>
+
+    <!-- 欢迎层：点一下才进大厅 -->
+    <div class="overlay" id="ovWelcome">
+      <h3>⚫⚪ 五子棋对弈</h3>
+      <p>开房对弈，<b>限定两人一局</b>：一个人创建房间拿到房间码，<br>
+         另一个人输入这个房间码就能进来对弈。<br>
+         可以同时开很多局，互不影响。</p>
+      <div class="row">
+        <button id="btnEnter">进入大厅</button>
+      </div>
+      <p class="overlay-tip">名字在启动器右上角的「名字登记」里设置（≤10 字）</p>
+      <p id="enterErr" style="color:#ff9f9f"></p>
+    </div>
+
+    <!-- 大厅层：创建房间 / 输房间码加入 -->
+    <div class="overlay hidden" id="ovLobby">
+      <h3>大厅</h3>
+      <div class="box">
+        <button id="btnCreate">创建房间（我执黑先手）</button>
+        <div class="sub" style="text-align:center">—— 或 输入朋友的房间码 ——</div>
+        <input id="roomInput" maxlength="4" placeholder="例如 AB3K" autocomplete="off">
+        <button id="btnJoin" class="ghost">加入房间</button>
+      </div>
+      <p class="overlay-tip" id="lobbyInfo">在线 0 人 · 房间 0 个</p>
+      <p id="lobbyErr" style="color:#ff9f9f; min-height:16px"></p>
+    </div>
+  </div>
+
+  <aside class="side">
+    <div class="card">
+      <h1>五子棋对弈</h1>
+      <div class="sub">服务端权威判定 · 15×15 · 房间制两人对局</div>
+    </div>
+
+    <div class="card" id="cardRoom" style="display:none">
+      <h2>房间码 <span class="sub" style="float:right; cursor:pointer" id="copyCode">复制</span></h2>
+      <div class="roomcode" id="roomCode">----</div>
+      <div class="seats">
+        <div class="seat" id="seatBlack">
+          <span class="stone b"></span><span class="who">黑 · 等待</span>
+          <span class="tag" id="tagBlack"></span>
+        </div>
+        <div class="seat" id="seatWhite">
+          <span class="stone w"></span><span class="who">白 · 等待</span>
+          <span class="tag" id="tagWhite"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="cardState" style="display:none">
+      <div class="turnline" id="turnLine">等待对手加入…</div>
+      <div class="row" style="margin-top:12px">
+        <button id="btnAgain" class="ghost" style="display:none">再来一局</button>
+        <button id="btnResign" class="ghost">认输</button>
+        <button id="btnLeave" class="danger">退出房间</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>规则</h2>
+      <div class="sub">
+        · 黑先白后，轮流落子<br>
+        · 先连成 5 子（横/竖/斜）者胜<br>
+        · 每局限两人：第三人加入会被拒绝<br>
+        · 认输 = 对方胜；双方可「再来一局」<br>
+        · 断线超时会自动腾出座位
+      </div>
+    </div>
+
+    <div id="status"></div>
+  </aside>
+</div>
+<script src="game.js"></script>
+</body>
+</html>

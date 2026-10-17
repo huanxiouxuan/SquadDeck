@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>单机模板 · 开黑启动器</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    background: radial-gradient(circle at 20% 0%, #1b2436 0%, #0b0f18 55%, #080a10 100%);
+    color: #e8eefc;
+    font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .app { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+  .stage { position: relative; }
+  canvas {
+    display: block; border-radius: 14px;
+    border: 1px solid rgba(120,170,255,.25);
+    box-shadow: 0 18px 50px rgba(0,0,0,.55);
+    background: #0b1119;
+    max-width: 100%; height: auto;
+    cursor: pointer;
+  }
+  .side { width: 240px; display: flex; flex-direction: column; gap: 14px; }
+  .card {
+    background: rgba(255,255,255,.045);
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 14px; padding: 14px 16px;
+  }
+  h1 { font-size: 17px; margin: 0 0 4px; font-weight: 600; }
+  h2 { font-size: 13px; margin: 0 0 10px; font-weight: 500; color: #8ea3c8; }
+  .sub { font-size: 12px; color: #7f90b0; line-height: 1.7; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 8px; }
+  .stat b { display: block; font-size: 22px; font-weight: 600; color: #ffd166; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 11px; color: #7f90b0; }
+  .overlay {
+    position: absolute; inset: 0; border-radius: 14px;
+    background: rgba(8,10,16,.9);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; text-align: center; padding: 24px;
+  }
+  .overlay.hidden { display: none; }
+  .overlay h3 { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: 1px; }
+  .overlay p { margin: 0; font-size: 13px; color: #93a4c4; line-height: 1.8; }
+  button {
+    padding: 11px 22px; border: none; border-radius: 9px; cursor: pointer;
+    font-size: 14px; font-family: inherit; font-weight: 600;
+    background: linear-gradient(180deg, #4ea1ff, #2f7fe0); color: #04101f;
+  }
+  button:hover { filter: brightness(1.1); }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="stage">
+    <canvas id="game" width="640" height="480"></canvas>
+    <div class="overlay" id="overlay">
+      <h3>🟦 单机模板</h3>
+      <p>30 秒内点中方块得分。<br>这是最小可玩的骨架 —— 换成你的玩法即可。</p>
+      <button id="start">开始</button>
+    </div>
+  </div>
+
+  <aside class="side">
+    <div class="card">
+      <h1>单机模板</h1>
+      <div class="sub">点方块得分 · 纯客户端</div>
+    </div>
+    <div class="card">
+      <h2>本局</h2>
+      <div class="stats">
+        <div class="stat"><b id="score">0</b><span>得分</span></div>
+        <div class="stat"><b id="time">30</b><span>剩余秒</span></div>
+        <div class="stat"><b id="best">0</b><span>最高分</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>改造成你的游戏</h2>
+      <div class="sub">
+        · 改 <code>game.json</code> 的 id/name/desc/icon<br>
+        · 换 <code>game.js</code> 里的玩法逻辑<br>
+        · 纯单机不用写 <code>world</code>，没有启停开关
+      </div>
+    </div>
+  </aside>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
