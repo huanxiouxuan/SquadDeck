@@ -291,10 +291,11 @@ if (-not (Test-Path -LiteralPath $bat)) {
 
 $made = @()
 
-# 1) 项目目录内：带相对路径，整个文件夹搬家后依然有效
-$inFolder = Join-Path $root $linkName
+# 1) 测试文件目录内：.lnk 记的是本机绝对路径，换电脑/换目录必然失效，
+#    所以它不算项目交付物，统一放 测试文件/（带相对路径 ..\SquadDeck.bat 作兜底）
+$inFolder = Join-Path (Join-Path $root '测试文件') $linkName
 $existed = Test-Path -LiteralPath $inFolder
-New-Shortcut -LnkPath $inFolder -Target $bat -Icon $ico -Name $desc -RelativePath 'SquadDeck.bat' -WorkingDir $root
+New-Shortcut -LnkPath $inFolder -Target $bat -Icon $ico -Name $desc -RelativePath '..\SquadDeck.bat' -WorkingDir $root
 $made += $inFolder
 
 # 2) 桌面：绝对路径定位（不带相对路径，避免猜错相对位置）
@@ -313,7 +314,7 @@ foreach ($m in $made) {
     Write-Host ("  [OK] {0}  {1}" -f $tag, $m) -ForegroundColor Green
 }
 if (-not $deskLink) {
-    Write-Host '  [!!] 没找到桌面目录，只生成了项目目录里的快捷方式。' -ForegroundColor Yellow
+    Write-Host '  [!!] 没找到桌面目录，只生成了测试文件目录里的快捷方式。' -ForegroundColor Yellow
 }
 Write-Host ''
 Write-Host "  目标：$bat"
