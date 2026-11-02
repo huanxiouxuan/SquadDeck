@@ -221,8 +221,10 @@ lkserver2-game/
    四个通用接口（同步参数由世界类自己解析，服务端不区分游戏）。
 
 > 三个联机游戏**全都自带服务端**：坦克 `gamemode/tank/server/GameWorld.java`、
-> 贪吃蛇联机版 `gamemode/snake2/server/SnakeWorld.java`、五子棋（在
-> `D:\项目\实验-游戏添加功能`，含房间制玩法）。内核 `src/lkserver/` 里没有任何一个具体游戏。
+> 贪吃蛇联机版 `gamemode/snake2/server/SnakeWorld.java`、五子棋
+> `gamemode/gmv9ny2bh/server/GomokuWorld.java`（房间制对局 + **人机对战**：
+> `server/GomokuAI.java` 是 Negamax + Alpha-Beta 搜索，说明见同目录 `README.md`）。
+> 内核 `src/lkserver/` 里没有任何一个具体游戏。
 
 > ⚠️ 源码编译需要 **JDK**（有 `javac`）。只装了 JRE 时 `server/*.java` 编不了 ——
 > 改用 `server.jar`，或换 JDK 运行服务器。

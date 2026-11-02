@@ -34,6 +34,8 @@
   var btnEnter = document.getElementById('btnEnter');
   var enterErr = document.getElementById('enterErr');
   var btnCreate = document.getElementById('btnCreate');
+  var btnAi = document.getElementById('btnAi');
+  var aiLine = document.getElementById('aiLine');
   var btnJoin = document.getElementById('btnJoin');
   var roomInput = document.getElementById('roomInput');
   var lobbyInfo = document.getElementById('lobbyInfo');
@@ -233,6 +235,21 @@
       turnLine.textContent = '对方思考中…';
     }
 
+    // AI 思考信息（只有人机对战才显示）——视频里这一行就是"它真的在算"的证据
+    if (room.ai) {
+      aiLine.style.display = '';
+      var a = room.ai;
+      if (a.moves > 0) {
+        var dtxt = a.depth > 0 ? ('深度 ' + a.depth) : '开局规则';
+        aiLine.textContent = 'AI：' + a.ms + ' ms · ' + dtxt
+            + ' · ' + Number(a.nodes).toLocaleString() + ' 节点 · 已应手 ' + a.moves + ' 次';
+      } else {
+        aiLine.textContent = 'AI 已入座（' + (a.seat === 1 ? '黑，先手' : '白，后手') + '）';
+      }
+    } else {
+      aiLine.style.display = 'none';
+    }
+
     // 按钮
     var playing = room.state === 'playing';
     var over = room.winner !== 0;
@@ -251,6 +268,11 @@
     }
     var mine = p.id === me;
     who.textContent = label + ' · ' + p.n + (mine ? '（你）' : '');
+    if (p.bot) {
+      tagEl.textContent = p.turn ? 'AI 该走' : 'AI';
+      tagEl.className = 'tag on';
+      return;
+    }
     if (p.on) {
       tagEl.textContent = p.turn ? '该他走' : '在线';
       tagEl.className = 'tag on';
@@ -387,6 +409,12 @@
   });
 
   btnEnter.addEventListener('click', enter);
+
+  // 人机对战：ai=1 建房，服务端会直接把 AI 棋手放到白座，房间一建好就能下
+  btnAi.addEventListener('click', function () {
+    lobbyErr.textContent = '';
+    doAct({ act: 'create', ai: 1 });
+  });
 
   btnCreate.addEventListener('click', function () {
     lobbyErr.textContent = '';

@@ -59,7 +59,11 @@ async function post(url, params) {
 
 /** 导入一份临时游戏（带 server/ 源码，这样世界能真的启起来）。 */
 async function importCopy() {
-  const files = ['index.html', 'game.js', 'server/GomokuWorld.java'].map(n => ({
+  // server/ 下有几个 .java 就传几个——GomokuWorld 依赖同目录的 GomokuAI，少传一个就编不过
+  const serverFiles = fs.readdirSync(path.join(SRC_DIR, 'server'))
+    .filter(n => n.endsWith('.java'))
+    .map(n => 'server/' + n);
+  const files = ['index.html', 'game.js', ...serverFiles].map(n => ({
     name: n, buf: fs.readFileSync(path.join(SRC_DIR, ...n.split('/')))
   }));
   const r = await fetch(BASE + '/api/games/import', {

@@ -65,6 +65,19 @@ public final class GomokuWorld implements GameWorldPlugin {
     /** 空房间（两人都走了）保留这么久后删除。 */
     private static final long EMPTY_ROOM_TTL_MS = 120000;
 
+    /**
+     * AI 每步的思考时间上限（毫秒）。实际耗时通常远低于它——迭代加深一旦算出
+     * 必胜/必败就直接收手，中局一般几十毫秒，开局甚至只要几毫秒。
+     *
+     * <p>为什么卡在 250ms 而不是给足 1 秒：{@code GomokuWorld} 的对外方法全部
+     * {@code synchronized}，AI 思考期间会把整个世界锁住（别的房间也一起等）。
+     * 250ms 是"棋力够用 + 不让人明显感到卡"的折中；正解是把思考挪到锁外做，
+     * 见 README「已知限制」。
+     */
+    private static final long AI_BUDGET_MS = 250;
+    /** AI 最大搜索层数。深到 8 层收益很小，却容易把预算吃满。 */
+    private static final int AI_MAX_DEPTH = 6;
+
     /** 四个方向（dx,dy）：横 / 竖 / 正斜 / 反斜。 */
     private static final int[][] DIRS = {{1, 0}, {0, 1}, {1, 1}, {1, -1}};
 
@@ -80,6 +93,15 @@ public final class GomokuWorld implements GameWorldPlugin {
         /** 座位：1 = 黑（先手），2 = 白（后手），0 = 未入座。 */
         int seat;
         boolean online = true;
+        /**
+         * 是不是 AI 棋手。
+         *
+         * <p>AI 走的是<b>和真人完全一样的通道</b>（同一个 {@link Room} 座位、同一个
+         * {@link #place} 判定、同一套胜负检查），只是它的落点由
+         * {@code GomokuAI.think()} 算出来而不是由浏览器上报。这样：AI 不需要任何
+         * 特殊协议，客户端也分不出"对面是人还是 AI"，联机路径一行没改。
+         */
+        boolean bot;
         long lastSeen;
 
         Player(String id) {
@@ -107,6 +129,17 @@ public final class GomokuWorld implements GameWorldPlugin {
         int moves;
         long createdAt;
         long lastActive;
+
+        // ---- AI 相关（r.ai = false 时全部无效）----
+        /** 本房间是不是"人机对战"。 */
+        boolean ai;
+        /** 最近一次 AI 思考的结果，直接透给前端展示。 */
+        int aiMs;
+        int aiNodes;
+        int aiDepth;
+        int aiScore;
+        /** AI 已经走过的步数（前端用来显示"AI 已应手 N 次"）。 */
+        int aiMoves;
 
         Room(String code) {
             this.code = code;
@@ -180,6 +213,14 @@ public final class GomokuWorld implements GameWorldPlugin {
             if (r.black == null && r.white == null
                     && now - r.lastActive > EMPTY_ROOM_TTL_MS) {
                 it.remove();
+            }
+        }
+
+        // 3) 兜底：人机对战里若轮到 AI 却没走（异常漏掉应手 / 变成先手），这里补一手，
+        //    避免玩家盯着一个不动棋盘。正常情况下 botTurn 已在 place/again 里走过，不会触发。
+        for (Room r : rooms.values()) {
+            if (r.ai) {
+                botTurn(r, now);
             }
         }
     }
@@ -302,7 +343,7 @@ public final class GomokuWorld implements GameWorldPlugin {
         if (act != null && !act.isEmpty()) {
             switch (act) {
                 case "create":
-                    err = createRoom(me, now);
+                    err = createRoom(me, now, p != null && "1".equals(p.get("ai")));
                     break;
                 case "join":
                     err = joinRoom(me, p == null ? null : p.get("room"), now);
@@ -332,8 +373,13 @@ public final class GomokuWorld implements GameWorldPlugin {
     // 房间操作（都在 synchronized 里，返回值 = 错误信息或 null）
     // =========================================================
 
-    /** 创建房间：建房者坐黑，等对手入座。 */
-    private String createRoom(Player me, long now) {
+    /**
+     * 创建房间：建房者坐黑，等对手入座。
+     *
+     * @param vsAi {@code true} 表示人机对战——立刻把一个 AI 棋手塞到白座上，
+     *             于是房间一建好就是"两人齐、可以下"，不用等谁加入
+     */
+    private String createRoom(Player me, long now, boolean vsAi) {
         if (me.room != null) {
             return "你已经在房间里了（房间码 " + me.room + "），先退出再创建";
         }
@@ -346,7 +392,25 @@ public final class GomokuWorld implements GameWorldPlugin {
         me.room = code;
         me.seat = 1;
         rooms.put(code, r);
+        if (vsAi) {
+            Player bot = newBot("AI 棋手");
+            bot.room = code;
+            bot.seat = 2;
+            r.white = bot;
+            r.ai = true;
+            r.lastActive = now;
+        }
         return null;
+    }
+
+    /** 造一个 AI 棋手。它<b>不进 players 表</b>——不受超时清理影响，也不计入在线人数。 */
+    private Player newBot(String name) {
+        Player p = new Player("bot" + idSeq.getAndIncrement());
+        p.name = name;
+        p.bot = true;
+        p.online = true;
+        p.lastSeen = Long.MAX_VALUE;   // 永不过期
+        return p;
     }
 
     /** 用房间码加入：坐白（空位）。 */
@@ -406,21 +470,69 @@ public final class GomokuWorld implements GameWorldPlugin {
         if (r.cells[y][x] != 0) {
             return "这里已经有子了";
         }
-        r.cells[y][x] = me.seat;
+        putStone(r, x, y, me.seat, now);
+        // 人机对战：轮到 AI 就立刻应手，讲完这一步时棋盘已经是"你一步、它一步"
+        botTurn(r, now);
+        return null;
+    }
+
+    /** 真正把一颗子放上去，并判定胜负 / 换手。人类走子和 AI 走子共用这一段。 */
+    private void putStone(Room r, int x, int y, int seat, long now) {
+        r.cells[y][x] = seat;
         r.last = new int[]{x, y};
         r.moves++;
         r.lastActive = now;
 
-        List<int[]> line = checkWin(r, x, y, me.seat);
+        List<int[]> line = checkWin(r, x, y, seat);
         if (line != null) {
-            r.winner = me.seat;
+            r.winner = seat;
             r.win = line;
         } else if (r.moves >= BOARD * BOARD) {
             r.winner = 3;   // 下满 = 平局
         } else {
             r.turn = 3 - r.turn;
         }
-        return null;
+    }
+
+    /**
+     * 轮到 AI 就让它走一步。
+     *
+     * <p>三处会调用：玩家落子之后（立刻应手）、点「再来一局」之后（AI 可能变成先手）、
+     * 以及 tick 兜底（防止某次应手因异常漏掉，房间卡死）。
+     */
+    private void botTurn(Room r, long now) {
+        if (!r.ai || r.winner != 0 || r.black == null || r.white == null) {
+            return;
+        }
+        Player bot = r.black.bot ? r.black : (r.white.bot ? r.white : null);
+        if (bot == null || r.turn != bot.seat) {
+            return;
+        }
+        GomokuAI.Move m = GomokuAI.think(r.cells, bot.seat, AI_BUDGET_MS, AI_MAX_DEPTH);
+        int x = m.x;
+        int y = m.y;
+        if (x < 0 || y < 0 || x >= BOARD || y >= BOARD || r.cells[y][x] != 0) {
+            // 兜底：AI 给的点不可用（理论上不会发生）——退化到第一个空位，绝不能让房间卡住
+            boolean done = false;
+            for (int yy = 0; yy < BOARD && !done; yy++) {
+                for (int xx = 0; xx < BOARD && !done; xx++) {
+                    if (r.cells[yy][xx] == 0) {
+                        x = xx;
+                        y = yy;
+                        done = true;
+                    }
+                }
+            }
+            if (!done) {
+                return;
+            }
+        }
+        r.aiMs = (int) m.ms;
+        r.aiNodes = (int) Math.min(Integer.MAX_VALUE, m.nodes);
+        r.aiDepth = m.depth;
+        r.aiScore = m.score;
+        r.aiMoves++;
+        putStone(r, x, y, bot.seat, now);
     }
 
     /** 认输：对方胜。 */
@@ -473,6 +585,13 @@ public final class GomokuWorld implements GameWorldPlugin {
         r.win = null;
         r.moves = 0;
         r.lastActive = now;
+        r.aiMoves = 0;
+        r.aiMs = 0;
+        r.aiNodes = 0;
+        r.aiDepth = 0;
+        r.aiScore = 0;
+        // 交换先后手后 AI 可能坐到了黑位，得让它先走
+        botTurn(r, now);
         return null;
     }
 
@@ -494,6 +613,16 @@ public final class GomokuWorld implements GameWorldPlugin {
             }
             if (r.white == p) {
                 r.white = null;
+            }
+            // 人走了，AI 也不必留着——否则房间永远"不是空的"，TTL 清不掉，会一直涨
+            if (r.ai) {
+                if (r.black != null && r.black.bot) {
+                    r.black = null;
+                }
+                if (r.white != null && r.white.bot) {
+                    r.white = null;
+                }
+                r.ai = false;
             }
             r.lastActive = System.currentTimeMillis();
             // 对手走了：本局直接作废，回来重新开
@@ -603,6 +732,22 @@ public final class GomokuWorld implements GameWorldPlugin {
         b.append(",\"white\":");
         appendSeat(b, r.white, r, 2);
 
+        // 人机对战：把 AI 最近一次的"思考过程"透出去，前端直接显示
+        // "0.03 秒 · 深度 6 · 812 节点"——视频里这一行就是"AI 真的在算"的证据
+        b.append(",\"ai\":");
+        if (!r.ai) {
+            b.append("null");
+        } else {
+            int botSeat = (r.black != null && r.black.bot) ? 1 : 2;
+            b.append("{\"seat\":").append(botSeat)
+                    .append(",\"ms\":").append(r.aiMs)
+                    .append(",\"nodes\":").append(r.aiNodes)
+                    .append(",\"depth\":").append(r.aiDepth)
+                    .append(",\"score\":").append(r.aiScore)
+                    .append(",\"moves\":").append(r.aiMoves)
+                    .append('}');
+        }
+
         // 棋盘：外层 y、内层 x
         b.append(",\"cells\":[");
         for (int y = 0; y < BOARD; y++) {
@@ -630,6 +775,7 @@ public final class GomokuWorld implements GameWorldPlugin {
         b.append("{\"id\":").append(Json.quote(p.id))
                 .append(",\"n\":").append(Json.quote(p.name))
                 .append(",\"on\":").append(p.online)
+                .append(",\"bot\":").append(p.bot)
                 // 该座位是不是「正轮到走」（客户端高亮用）
                 .append(",\"turn\":").append(r.winner == 0 && r.turn == seat)
                 .append('}');

@@ -70,7 +70,12 @@ async function ensureGame() {
   }
   // 连同 server/ 下的自带服务端源码一起导入——内核会现场编译它，
   // 这就是「导入即用、不用重编 jar」的关键。
-  const files = ['index.html', 'game.js', 'server/GomokuWorld.java'].map(n => ({
+  // server/ 下有几个 .java 就传几个（AI 引擎 GomokuAI.java 也在这里），
+  // 别写死清单——少传一个，新机器上就会编译失败。
+  const serverFiles = fs.readdirSync(path.join(SRC_DIR, 'server'))
+    .filter(n => n.endsWith('.java'))
+    .map(n => 'server/' + n);
+  const files = ['index.html', 'game.js', ...serverFiles].map(n => ({
     name: n, buf: fs.readFileSync(path.join(SRC_DIR, ...n.split('/')))
   }));
   const r = await fetch(BASE + '/api/games/import', {
