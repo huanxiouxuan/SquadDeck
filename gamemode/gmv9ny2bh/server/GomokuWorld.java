@@ -77,6 +77,17 @@ public final class GomokuWorld implements GameWorldPlugin {
     private static final long AI_BUDGET_MS = 250;
     /** AI 最大搜索层数。深到 8 层收益很小，却容易把预算吃满。 */
     private static final int AI_MAX_DEPTH = 6;
+    /**
+     * AI 落子的固定延迟（毫秒）。
+     *
+     * <p>它算得只要几十毫秒，**但立刻落子会让人措手不及**——没有"对手在思考"的节奏感，
+     * 看起来像本地脚本而不是一个对手。所以算完不马上放，而是排到 800ms 后再执行；
+     * 配合客户端 500ms 的轮询，玩家实际感知到的应手间隔约 0.8~1.3 秒。
+     *
+     * <p>关键是**不能在 HTTP 请求里 sleep**：那 800ms 会连同 {@code synchronized}
+     * 一起把整个世界锁住。这里排的是独立调度线程的任务，人类那次请求立刻返回。
+     */
+    private static final long AI_DELAY_MS = 800;
 
     /** 四个方向（dx,dy）：横 / 竖 / 正斜 / 反斜。 */
     private static final int[][] DIRS = {{1, 0}, {0, 1}, {1, 1}, {1, -1}};
@@ -140,6 +151,8 @@ public final class GomokuWorld implements GameWorldPlugin {
         int aiScore;
         /** AI 已经走过的步数（前端用来显示"AI 已应手 N 次"）。 */
         int aiMoves;
+        /** 是否已经排了一次"稍后落子"的任务——防止 tick 反复排队。 */
+        boolean aiPending;
 
         Room(String code) {
             this.code = code;
@@ -157,6 +170,8 @@ public final class GomokuWorld implements GameWorldPlugin {
     private final Random rnd = new Random();
     private final AtomicLong idSeq = new AtomicLong(1);
     private volatile ScheduledExecutorService ticker;
+    /** AI 落子的调度线程：让"思考 → 落子"之间隔一拍，又不占用 HTTP 请求线程。 */
+    private volatile ScheduledExecutorService aiPool;
 
     // =========================================================
     // 生命周期
@@ -171,6 +186,13 @@ public final class GomokuWorld implements GameWorldPlugin {
         });
         ticker = s;
         s.scheduleAtFixedRate(this::safeTick, TICK_MS, TICK_MS, TimeUnit.MILLISECONDS);
+
+        ScheduledExecutorService a = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "GomokuAI");
+            t.setDaemon(true);
+            return t;
+        });
+        aiPool = a;
     }
 
     @Override
@@ -178,6 +200,10 @@ public final class GomokuWorld implements GameWorldPlugin {
         ScheduledExecutorService s = ticker;
         if (s != null) {
             s.shutdownNow();
+        }
+        ScheduledExecutorService a = aiPool;
+        if (a != null) {
+            a.shutdownNow();
         }
     }
 
@@ -216,12 +242,53 @@ public final class GomokuWorld implements GameWorldPlugin {
             }
         }
 
-        // 3) 兜底：人机对战里若轮到 AI 却没走（异常漏掉应手 / 变成先手），这里补一手，
-        //    避免玩家盯着一个不动棋盘。正常情况下 botTurn 已在 place/again 里走过，不会触发。
+        // 3) 兜底：人机对战里若轮到 AI 却没排任务（异常漏掉 / 刚变成先手），这里补一次，
+        //    避免玩家盯着一个不动的棋盘。正常情况下 place/again 已经排过了，不会重复。
         for (Room r : rooms.values()) {
             if (r.ai) {
-                botTurn(r, now);
+                scheduleBotTurn(r);
             }
+        }
+    }
+
+    /**
+     * 排一次"AI 稍后落子"的任务。
+     *
+     * <p>三条约束：
+     * <ul>
+     *   <li><b>只排一次</b>——{@code aiPending} 挡住 tick 的重复排队；</li>
+     *   <li><b>不占请求线程</b>——延迟在独立调度线程里等，人类的 HTTP 请求立刻返回，
+     *       否则那 800ms 会连着 {@code synchronized} 把整个世界锁住；</li>
+     *   <li><b>执行时重新校验</b>——800ms 里人可能已经退出、认输或房间被清掉，
+     *       所以任务体要在锁内重新调 {@link #botTurn}，它会自己判断"还该不该走"。</li>
+     * </ul>
+     */
+    private void scheduleBotTurn(Room r) {
+        if (!r.ai || r.aiPending || r.winner != 0
+                || r.black == null || r.white == null) {
+            return;
+        }
+        Player bot = r.black.bot ? r.black : (r.white.bot ? r.white : null);
+        if (bot == null || r.turn != bot.seat) {
+            return;
+        }
+        ScheduledExecutorService a = aiPool;
+        if (a == null) {
+            // 世界还没 start（理论上不会）：退回同步落子，至少不能卡住房间
+            botTurn(r, System.currentTimeMillis());
+            return;
+        }
+        r.aiPending = true;
+        try {
+            a.schedule(() -> {
+                synchronized (GomokuWorld.this) {
+                    r.aiPending = false;
+                    botTurn(r, System.currentTimeMillis());
+                }
+            }, AI_DELAY_MS, TimeUnit.MILLISECONDS);
+        } catch (RuntimeException e) {
+            // 调度器已关闭（世界 stop 中）：别让房间永远 pending
+            r.aiPending = false;
         }
     }
 
@@ -471,8 +538,8 @@ public final class GomokuWorld implements GameWorldPlugin {
             return "这里已经有子了";
         }
         putStone(r, x, y, me.seat, now);
-        // 人机对战：轮到 AI 就立刻应手，讲完这一步时棋盘已经是"你一步、它一步"
-        botTurn(r, now);
+        // 人机对战：轮到 AI 就排一次"稍后落子"，让对手看起来在想棋
+        scheduleBotTurn(r);
         return null;
     }
 
@@ -495,10 +562,11 @@ public final class GomokuWorld implements GameWorldPlugin {
     }
 
     /**
-     * 轮到 AI 就让它走一步。
+     * 让 AI 走一步（立刻执行）。
      *
-     * <p>三处会调用：玩家落子之后（立刻应手）、点「再来一局」之后（AI 可能变成先手）、
-     * 以及 tick 兜底（防止某次应手因异常漏掉，房间卡死）。
+     * <p>它只会被 {@link #scheduleBotTurn} 排的延迟任务调用，或者在调度器没起来时兜底调用——
+     * 也就是说 AI 的落子<b>永远不会挡在人类的请求里</b>。进来先重新校验一遍
+     * "还是不是它的回合"，因为排队这 800ms 里局面可能已经变了。
      */
     private void botTurn(Room r, long now) {
         if (!r.ai || r.winner != 0 || r.black == null || r.white == null) {
@@ -590,8 +658,8 @@ public final class GomokuWorld implements GameWorldPlugin {
         r.aiNodes = 0;
         r.aiDepth = 0;
         r.aiScore = 0;
-        // 交换先后手后 AI 可能坐到了黑位，得让它先走
-        botTurn(r, now);
+        // 交换先后手后 AI 可能坐到了黑位，得让它先走（同样隔一拍）
+        scheduleBotTurn(r);
         return null;
     }
 

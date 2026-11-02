@@ -124,12 +124,29 @@ function countStones(cells) {
   ok(room.ai && room.ai.seat === 2, 'ai 信息块存在且 AI 执白', JSON.stringify(room.ai));
   ok(c1.d.players === 1, 'AI 不计入在线人数（players=1）', 'players=' + c1.d.players);
 
-  // ---------- 2) 我落子 → AI 应手 ----------
+  // ---------- 2) 我落子 → AI 隔一拍应手 ----------
+  // AI 的落子是延迟送达的（AI_DELAY_MS=800ms，客户端 500ms 轮询），
+  // 所以这里不能立刻断言，要轮询等它落子——顺便验证"不会卡住不动"。
   const t0 = Date.now();
   const c2 = await sync(id, { act: 'place', x: 7, y: 7 });
-  const dt = Date.now() - t0;
   room = c2.d.room;
-  ok(room.moves === 2, '我一步 + AI 一步 = 2 手', 'moves=' + room.moves);
+  ok(room.moves === 1, '落子后立刻返回，只有我这一手（AI 还没落）',
+      'moves=' + room.moves);
+  ok(room.turn === 2, '轮到 AI（turn=2），客户端会显示"对方思考中"',
+      'turn=' + room.turn);
+  ok(!room.ai.moves, '此时 AI 应手次数仍为 0', JSON.stringify(room.ai));
+
+  // 等 AI 落子（最多 4 秒）
+  let waited = 0;
+  while (room.moves < 2 && waited < 4000) {
+    await new Promise(r => setTimeout(r, 200));
+    waited += 200;
+    const s = await sync(id, {});
+    room = s.d.room;
+  }
+  const dt = Date.now() - t0;
+  ok(room.moves === 2, 'AI 在 ' + dt + ' ms 内应手（延迟送达）', 'moves=' + room.moves);
+  ok(dt >= 500, '应手不是瞬发的（等了 ' + dt + ' ms，说明有"思考"节奏）');
   ok(room.turn === 1, '应手后轮回我（turn=1）', 'turn=' + room.turn);
   ok(countStones(room.cells) === 2, '棋盘上恰好 2 颗子', 'count=' + countStones(room.cells));
   ok(room.cells[7][7] === 1, '我的子在我下的位置');
@@ -144,7 +161,6 @@ function countStones(cells) {
   ok(typeof room.ai.ms === 'number' && room.ai.ms >= 0, '带回思考耗时 ' + room.ai.ms + ' ms');
   ok(typeof room.ai.depth === 'number' && room.ai.depth >= 0, '带回搜索深度 ' + room.ai.depth);
   ok(typeof room.ai.nodes === 'number' && room.ai.nodes >= 0, '带回节点数 ' + room.ai.nodes);
-  ok(dt < 3000, '整个往返在 3 秒内完成（' + dt + ' ms）');
 
   // ---------- 3) 往 AI 的子上落 → 被拒 ----------
   if (aiStone) {
@@ -161,9 +177,19 @@ function countStones(cells) {
   ok(room.winner === 0, '再来一局：胜负已重置');
   ok(room.youSeat === 2, '交换先后手：我现在执白', 'youSeat=' + room.youSeat);
   ok(room.black && room.black.bot === true, 'AI 换到黑座');
-  ok(room.moves === 1, 'AI 执黑，已经自己走了第一步', 'moves=' + room.moves);
-  ok(countStones(room.cells) === 1, '棋盘上只有 AI 那一颗子');
   ok(room.ai.seat === 1, 'ai.seat 跟着换成 1', JSON.stringify(room.ai));
+
+  // AI 执黑 → 它会隔一拍自己走第一步
+  let w2 = 0;
+  while (room.moves < 1 && w2 < 4000) {
+    await new Promise(r => setTimeout(r, 200));
+    w2 += 200;
+    const s = await sync(id, {});
+    room = s.d.room;
+  }
+  ok(room.moves === 1, 'AI 执黑，自己走了第一步', 'moves=' + room.moves);
+  ok(countStones(room.cells) === 1, '棋盘上只有 AI 那一颗子');
+  ok(room.turn === 2, '轮到我（白方）走', 'turn=' + room.turn);
 
   // ---------- 5) 退出房间 ----------
   const lv = await sync(id, { act: 'leave' });
