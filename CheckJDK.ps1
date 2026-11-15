@@ -1,4 +1,4 @@
-﻿# 检查JDK.ps1 - 检查这台电脑有没有 JDK，没有就提醒下载
+﻿# CheckJDK.ps1 - 检查这台电脑有没有 JDK，没有就提醒下载
 # 由 检查JDK.bat 调用。游戏服务端是 Java 程序，需要 JDK 27 或更高版本。
 # 编码必须是 UTF-8 with BOM，否则 PowerShell 5.1 按 GBK 读中文会乱码。
 
@@ -28,8 +28,12 @@ function Get-JavaVer([string]$exe) {
     return $null
 }
 
-# ---- 多级查找：JAVA_HOME -> PATH -> 常见安装位置 ----
+# ---- 多级查找：项目自带 jdk\ -> JAVA_HOME -> PATH -> 常见安装位置 ----
 $found = @{}    # exe 路径 -> 信息（同一个 java.exe 不重复报）
+
+# 项目自带的 jdk\ —— run.bat / build.bat 里它的优先级最高，这里排第一位
+$bundled = Join-Path (Join-Path $root 'jdk') 'bin\java.exe'
+if (Test-Path -LiteralPath $bundled) { $found[$bundled] = '项目自带 jdk\（启动脚本优先用它）' }
 
 if ($env:JAVA_HOME) {
     $exe = Join-Path $env:JAVA_HOME 'bin\java.exe'
@@ -102,8 +106,14 @@ foreach ($exe in ($found.Keys | Sort-Object)) {
     $ver = Get-JavaVer $exe
     $major = if ($ver) { Get-JavaMajor $ver } else { 0 }
     $src = $found[$exe]
+    # 同一个 bin 目录下有没有 javac —— 只有 JRE 时跑得起来，但编译不了游戏自带的 server/*.java
+    $hasJavac = Test-Path -LiteralPath (Join-Path (Split-Path -Parent $exe) 'javac.exe')
     if ($major -ge $need) {
         Write-Host ("  [OK] JDK {0,-10} {1}" -f $ver, $src) -ForegroundColor Green
+        if (-not $hasJavac) {
+            Write-Host '       注意：这个目录里没有 javac（是 JRE 不是 JDK）——已有游戏能跑，' -ForegroundColor Yellow
+            Write-Host '             但导入带 server/*.java 的游戏时会在现场编译这一步失败。' -ForegroundColor Yellow
+        }
         if (-not $best -or $major -gt $best.Major) { $best = @{ Ver = $ver; Major = $major; Src = $src } }
     } elseif ($major -gt 0) {
         Write-Host ("  [!!] JDK {0,-10} {1}  （版本太低，游戏需要 {2} 或更高）" -f $ver, $src, $need) -ForegroundColor Yellow

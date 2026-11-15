@@ -26,8 +26,8 @@ $linkName = 'SquadDeck.lnk'
 $desc = 'SquadDeck 联机游戏启动器'
 
 # ---------------- LinkTargetIDList 构造（.lnk 能被发射的硬性要求） ----------------
-# 条目格式按本机资源管理器正统 .lnk 逐字段逆向确认（测试文件/dump_idlist.py 可
-# 复现，样本：桌面 Keil uVision5.LNK 全量 hexdump）。现代 Win10 .lnk 的 IDList
+# 条目格式按本机资源管理器正统 .lnk 逐字段逆向确认（样本：桌面 Keil uVision5.LNK
+# 全量 hexdump）。现代 Win10 .lnk 的 IDList
 # 是「单项巨型」格式：<uint16 链长+2> + 经典条目链 + <00 00>，且每个文件夹/文件
 # 条目尾部还带 48+UTF-16名长 字节的扩展区（EF BE 块 + UTF-16 名 + 旧尺寸字段）。
 # 2026-10-17 实测：只写经典短条目（无外层、无扩展区）过不了 IShellLink::Load，
@@ -291,11 +291,11 @@ if (-not (Test-Path -LiteralPath $bat)) {
 
 $made = @()
 
-# 1) 测试文件目录内：.lnk 记的是本机绝对路径，换电脑/换目录必然失效，
-#    所以它不算项目交付物，统一放 测试文件/（带相对路径 ..\SquadDeck.bat 作兜底）
-$inFolder = Join-Path (Join-Path $root '测试文件') $linkName
+# 1) 项目根目录内：.lnk 记的是本机绝对路径，换电脑/换目录必然失效，所以它不算
+#    项目交付物——`*.lnk` 已在 .gitignore 里，生成在根目录也不会被提交
+$inFolder = Join-Path $root $linkName
 $existed = Test-Path -LiteralPath $inFolder
-New-Shortcut -LnkPath $inFolder -Target $bat -Icon $ico -Name $desc -RelativePath '..\SquadDeck.bat' -WorkingDir $root
+New-Shortcut -LnkPath $inFolder -Target $bat -Icon $ico -Name $desc -RelativePath 'SquadDeck.bat' -WorkingDir $root
 $made += $inFolder
 
 # 2) 桌面：绝对路径定位（不带相对路径，避免猜错相对位置）
@@ -314,7 +314,7 @@ foreach ($m in $made) {
     Write-Host ("  [OK] {0}  {1}" -f $tag, $m) -ForegroundColor Green
 }
 if (-not $deskLink) {
-    Write-Host '  [!!] 没找到桌面目录，只生成了测试文件目录里的快捷方式。' -ForegroundColor Yellow
+    Write-Host '  [!!] 没找到桌面目录，只生成了项目根目录里的快捷方式。' -ForegroundColor Yellow
 }
 Write-Host ''
 Write-Host "  目标：$bat"

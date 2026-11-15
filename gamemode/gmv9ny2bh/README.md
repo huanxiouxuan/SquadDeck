@@ -71,13 +71,9 @@ AI 算一步只要几十毫秒，**但立刻落子会让人措手不及**——�
 
 ## 实测数据
 
-复现命令（在项目根目录，需 JDK）：
-
-```bash
-javac -encoding UTF-8 -d 测试文件/.bench \
-      gamemode/gmv9ny2bh/server/GomokuAI.java 测试文件/AiBench.java
-java -cp 测试文件/.bench lkserver.AiBench 20
-```
+> 复现说明：自动对战台（`AiBench`）是本机开发时的一次性工具，**不随仓库分发**——
+> 它只是反复调用 `GomokuAI.think(cells, seat, budget, depth)` 做两两对局，统计胜负与耗时。
+> 想复现下面的数字，照这个入口自己写个 200 行左右的 driver 即可（20 局制、黑白轮换）。
 
 **① 战术正确性**（固定局面，不依赖运气）
 
