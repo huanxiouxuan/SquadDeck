@@ -1,6 +1,6 @@
 @echo off
 rem ============================================================
-rem  Downloads a portable JDK (Eclipse Temurin 21 LTS,
+rem  Downloads a portable JDK (Eclipse Temurin 27 LTS,
 rem  Windows x64, zip) and unpacks it into .\jdk so this
 rem  folder runs on any PC without a pre-installed JDK.
 rem
@@ -23,7 +23,7 @@ cd /d "%~dp0"
 title Portable JDK Downloader
 
 set "JDK_DIR=jdk"
-set "JDK_API_URL=https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jdk/hotspot/normal/eclipse"
+set "JDK_API_URL=https://api.adoptium.net/v3/binary/latest/27/ga/windows/x64/jdk/hotspot/normal/eclipse"
 set "ZIP=%TEMP%\lkserver2-jdk-portable.zip"
 
 rem --- 0. Already installed? ------------------------------------
@@ -39,13 +39,13 @@ if exist "%JDK_DIR%\bin\java.exe" (
 
 echo ============================================================
 echo   Portable JDK downloader for lkserver2-game
-echo   Source: Eclipse Temurin JDK 21 LTS ^(Windows x64, zip^)
+echo   Source: Eclipse Temurin JDK 27 LTS ^(Windows x64, zip^)
 echo   Target: %CD%\%JDK_DIR%
 echo ============================================================
 echo.
 
 rem --- 1. Download ----------------------------------------------
-echo [1/4] Downloading JDK 21 ... about 200 MB, please wait.
+echo [1/4] Downloading JDK 27 ... about 200 MB, please wait.
 if exist "%ZIP%" del /q "%ZIP%"
 where curl >nul 2>nul
 if not errorlevel 1 (
@@ -69,7 +69,7 @@ if not errorlevel 1 (
 if errorlevel 1 goto :ex_failed
 if not exist "jdk-stage" goto :ex_failed
 
-rem The zip contains a single top-level folder like "jdk-21.0.12.1+1".
+rem The zip contains a single top-level folder like "jdk-27.0.1+2".
 rem Move whatever it is called to .\jdk
 set "INNER="
 for /d %%D in ("jdk-stage\*") do set "INNER=%%~fD"
@@ -137,7 +137,7 @@ echo.
 echo [ERROR] Extraction failed. tar.exe needs Windows 10 version
 echo 1803 or newer. The downloaded zip is kept at:
 echo   %ZIP%
-echo Extract it manually, then rename the "jdk-21..." folder
+echo Extract it manually, then rename the "jdk-27..." folder
 echo to "jdk".
 echo.
 pause

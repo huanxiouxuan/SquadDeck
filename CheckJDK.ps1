@@ -1,10 +1,10 @@
 ﻿# 检查JDK.ps1 - 检查这台电脑有没有 JDK，没有就提醒下载
-# 由 检查JDK.bat 调用。游戏服务端是 Java 程序，需要 JDK 17 或更高版本。
+# 由 检查JDK.bat 调用。游戏服务端是 Java 程序，需要 JDK 27 或更高版本。
 # 编码必须是 UTF-8 with BOM，否则 PowerShell 5.1 按 GBK 读中文会乱码。
 
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
-$need = 17                     # 项目要求的最低 JDK 大版本（见 run.bat 注释）
+$need = 27                     # 项目要求的最低 JDK 大版本（见 run.bat 注释）
 
 function Get-JavaMajor([string]$ver) {
     # java -version 输出形如：openjdk version "17.0.16" / "27-ea" / "1.8.0_431"
@@ -63,7 +63,7 @@ if ($found.Count -eq 0) {
     # ---------- 没找到：提醒 + 给下载入口 ----------
     Write-Host '  [X] 这台电脑没有检测到 JDK。' -ForegroundColor Red
     Write-Host ''
-    Write-Host '  为什么需要它：游戏的服务端是 Java 程序，必须有 JDK 17 或更高版本'
+    Write-Host '  为什么需要它：游戏的服务端是 Java 程序，必须有 JDK 27 或更高版本'
     Write-Host '  才能运行（JRE 不行，要的是带开发包的 JDK）。'
     Write-Host ''
     Write-Host '  两种解决办法：'
@@ -85,7 +85,7 @@ if ($found.Count -eq 0) {
         }
     } elseif ($ans -eq 'N' -or $ans -eq 'n') {
         Write-Host ''
-        Write-Host '  已打开 JDK 官网，下载页选 Windows / JDK 17 或更高版本即可。' -ForegroundColor Green
+        Write-Host '  已打开 JDK 官网，下载页选 Windows / JDK 27 或更高版本即可。' -ForegroundColor Green
         Start-Sleep -Seconds 2
         Start-Process 'https://adoptium.net/temurin/releases/'
     } else {

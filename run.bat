@@ -5,7 +5,7 @@ cd /d "%~dp0"
 
 rem =============================================================
 rem  If auto-detection cannot find a JDK, set it manually here:
-rem      set "JK_JDK_HOME=D:\Java\jdk-21"
+rem      set "JK_JDK_HOME=D:\Java\jdk-27"
 rem
 rem  NOTE: this file is intentionally ASCII-only. Windows cmd.exe
 rem  parses .bat files using the ANSI code page (GBK on zh-CN), so
@@ -33,7 +33,7 @@ call :find_jdk
 if not defined JDK_BIN (
   echo.
   echo [ERROR] No JDK found, cannot run.
-  echo         This project needs JDK 17 or newer.
+  echo         This project needs JDK 27 or newer.
   echo         Download: https://adoptium.net/temurin/releases/
   echo.
   exit /b 1
@@ -44,13 +44,21 @@ java -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 -jar 
 exit /b 0
 
 rem -------------------------------------------------------------
-rem Find JDK by priority: JK_JDK_HOME -> JAVA_HOME -> PATH -> bundled
+rem Find JDK by priority:
+rem   1. JK_JDK_HOME      (explicit override, see top of this file)
+rem   2. .\jdk            (bundled: any JDK unzipped next to this script)
+rem   3. JAVA_HOME
+rem   4. PATH
+rem   5. %USERPROFILE%\.jdks\*
+rem   6. workbuddy runtime
 rem -------------------------------------------------------------
 :find_jdk
 set "JDK_BIN="
 if defined JK_JDK_HOME if exist "%JK_JDK_HOME%\bin\java.exe" set "JDK_BIN=%JK_JDK_HOME%\bin"
+rem bundled JDK wins over any system-wide install, so a folder carrying its
+rem own .\jdk behaves identically on every PC.
+if not defined JDK_BIN if exist "%~dp0jdk\bin\java.exe" set "JDK_BIN=%~dp0jdk\bin"
 if not defined JDK_BIN if defined JAVA_HOME if exist "%JAVA_HOME%\bin\java.exe" set "JDK_BIN=%JAVA_HOME%\bin"
 if not defined JDK_BIN for /f "delims=" %%I in ('where java 2^>nul') do if not defined JDK_BIN set "JDK_BIN=%%~dpI"
 if not defined JDK_BIN for /d %%D in ("%USERPROFILE%\.jdks\*") do if exist "%%~fD\bin\java.exe" set "JDK_BIN=%%~fD\bin"
-if not defined JDK_BIN if exist "%USERPROFILE%\.workbuddy\binaries\java\jdk-21.0.12.1+1\bin\java.exe" set "JDK_BIN=%USERPROFILE%\.workbuddy\binaries\java\jdk-21.0.12.1+1\bin"
 exit /b 0

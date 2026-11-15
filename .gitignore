@@ -7,6 +7,11 @@ out/
 # ===== 第三方大文件（不进仓库，GitHub 单文件上限 100MB）=====
 *.exe
 
+# 便携 JDK：把 JDK 解压成 .\jdk 后，run.bat / build.bat 会优先用它，
+# 让整个文件夹能拷到没装 JDK 的机器上直接跑。整整 376 MB，不进仓库。
+jdk/
+jdk*.zip
+
 # ===== 运行日志 / 系统垃圾 =====
 *.log
 Thumbs.db

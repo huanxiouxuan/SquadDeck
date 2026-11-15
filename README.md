@@ -246,20 +246,22 @@ lkserver2-game/
 
 ### 环境要求
 
-只需要 **JDK 17 或更高版本**。无需任何第三方依赖、无需 Maven/Gradle。
+需要 **JDK 27 或更高版本**（`lkserver2-game.jar` 里的 class 是 Java 27 字节码，用 17 或 21 会直接报 `UnsupportedClassVersionError`）。无需任何第三方依赖、无需 Maven/Gradle。
 
 `build.bat` / `run.bat` 会按下面的顺序**自动查找 JDK**，一般不用手动配：
 
 1. 脚本顶部的 `JK_JDK_HOME`（手动指定，默认留空）
-2. 环境变量 `JAVA_HOME`
-3. `PATH` 里的 `javac` / `java`
-4. 用户目录下的 `%USERPROFILE%\.jdks\*`（IntelliJ IDEA 等 IDE 下载的 JDK 都放这里）
-5. 本机免安装 JDK 目录
+2. **项目根目录下的 `jdk\`**（便携版；存在就优先用，不受本机其它 JDK 干扰）
+3. 环境变量 `JAVA_HOME`
+4. `PATH` 里的 `javac` / `java`
+5. 用户目录下的 `%USERPROFILE%\.jdks\*`（IntelliJ IDEA 等 IDE 下载的 JDK 都放这里）
 
 如果全都找不到，脚本会提示你去 <https://adoptium.net/temurin/releases/> 下载安装。
-想手动指定，把脚本开头的 `set "JK_JDK_HOME="` 改成你的 JDK 根目录即可（例如 `D:\Java\jdk-21`）。
+想手动指定，把脚本开头的 `set "JK_JDK_HOME="` 改成你的 JDK 根目录即可（例如 `D:\Java\jdk-27`）。
 
-> **换电脑 / 电脑上没装 JDK**：双击项目里的 `下载便携JDK.bat`——它会自动下载 Temurin 21 LTS（Windows x64 zip 版）并解压到项目 `jdk\` 目录，同时把 `build.bat` / `run.bat` 顶部的 `JK_JDK_HOME` 指向它（写字面量 `%~dp0jdk`，项目整体挪盘符/换路径也不会失效）。之后整个文件夹拷贝到任何 Windows 电脑都能直接跑，无需安装 JDK。
+> **换电脑 / 电脑上没装 JDK**：双击项目里的 `下载便携JDK.bat`——它会自动下载 Temurin 27 LTS（Windows x64 zip 版）并解压成项目根目录下的 `jdk\`。`build.bat` / `run.bat` 会自动识别这个目录并优先使用（用 `%~dp0jdk` 相对定位，项目挪盘符、换路径都不会失效），**不需要再改 `JK_JDK_HOME`**。之后整个文件夹拷贝到任何 Windows 电脑都能直接跑，无需安装 JDK。
+>
+> 注意：`jdk\` 有 376 MB，已在 `.gitignore` 里排除，**不会随 git 仓库分发**。克隆仓库的人如果本机没装 JDK 27，需要用这个脚本自己下载一份，或者直接拷一份别人已经带 `jdk\` 的整个文件夹。
 
 > **换电脑 / 朋友没装 Radmin VPN**：双击项目里的 `下载VPN.bat`——它会自动从 radmin-vpn.com 下载官方安装包（`radmin_vpn_free.exe`）到项目 `radmin-vpn\` 目录，下载后可选择立即安装。Radmin VPN 是跨网络联机用的免费虚拟局域网工具，安装需要管理员权限（要装虚拟网卡），装好双方加入**同一个** Radmin 网络即可联机。
 
